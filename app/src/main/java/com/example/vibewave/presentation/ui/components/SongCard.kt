@@ -1,5 +1,6 @@
 package com.example.vibewave.presentation.ui.components
 
+import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
@@ -43,19 +45,12 @@ fun SongCard(navController: NavController, song: Song?) {
                 navController.navigate(Screen.PlayMusic.createRoute(song!!))
             }
     ) {
-        Image(
-            painter = painterResource(id = R.drawable.album1),
-            contentDescription = "App logo",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(cardWidth)
-                .shadow(
-                    elevation = 10.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    spotColor = Color.White.copy(alpha = 0.8f)
-                )
-                .clip(RoundedCornerShape(20.dp))
+        SongThumbnail(
+            thumbnail = song?.thumbnail,
+            cardWidth = cardWidth,
+            drawableId = R.drawable.album1
         )
+
         Spacer(modifier = Modifier.width(10.dp))
         Column(
             modifier = Modifier

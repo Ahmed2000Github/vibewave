@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -26,8 +27,11 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -43,10 +47,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,17 +60,54 @@ import androidx.navigation.NavController
 import com.example.vibewave.R
 import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.navigation.Screen
+import com.example.vibewave.presentation.ui.components.SongThumbnail
+import com.example.vibewave.utils.AudioPlayerService
+import com.example.vibewave.utils.FormatUtils.formatTime
 import kotlin.math.absoluteValue
 import kotlin.math.sin
 
 @Composable
 fun PlayMusicScreen(navController: NavController, song: Song) {
     val configuration = LocalConfiguration.current
+    val context = LocalContext.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
-    var progress by remember { mutableFloatStateOf(0.3f) }
-    var isPlaying by remember { mutableStateOf(false) }
+    var progress by remember { mutableFloatStateOf(0f) }
+    var waveformData by remember { mutableStateOf<List<Float>>(emptyList()) }
+    var duration by remember { mutableIntStateOf(1) }
+    var currentPosition by remember { mutableIntStateOf(0) }
+    var isPaused by remember { mutableStateOf(false) }
     val cardWidth = (screenWidth - (32.dp))
+    val controlIconSize = 25.dp
+    val onAmplitudeUpdated:(amplitudes: List<Float>)->Unit = {
+            amplitudes -> waveformData = amplitudes
+    }
+    val audioPlayer = remember {
+        AudioPlayerService(context).apply {
+            setProgressUpdateListener { currentPos, totalDuration ->
+                duration = totalDuration
+                currentPosition = currentPos
+                progress = if (totalDuration > 0) {
+                    currentPos.toFloat() / totalDuration.toFloat()
+                } else 0f
+            }
+        }
+    }
+    LaunchedEffect(song.filePath) {
+        try {
+//            waveformData = WaveformUtils.extractWaveformData(context, song.filePath)
+            audioPlayer.playAudioFile(song.filePath, onAmplitudesUpdate = onAmplitudeUpdated)
+        } catch (e: Exception) {
+            println("Failed to play: ${e.message}")
+//            playerError = "Failed to play: ${e.message}"
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            audioPlayer.cleanup()
+        }
+    }
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars
     ) { innerPadding ->
@@ -88,10 +131,12 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                         modifier = Modifier
                             .size(30.dp)
                             .clickable {
+                                audioPlayer.cleanup()
                                 navController.popBackStack()
                             },
                         tint = Color.White
                     )
+                    Spacer(modifier = Modifier.width(20.dp))
                     Text(
                         modifier = Modifier.weight(1f),
                         text = song.title,
@@ -101,6 +146,7 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                         textAlign = TextAlign.Center,
                         overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.width(20.dp))
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = "Back",
@@ -113,25 +159,18 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                     )
                 }
                 Spacer(modifier = Modifier.height(26.dp))
-                Image(
-                    painter = painterResource(id = R.drawable.album1),
-                    contentDescription = "App logo",
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .size(cardWidth)
-                        .shadow(
-                            elevation = 10.dp, // Shadow intensity
-                            shape = RoundedCornerShape(20.dp), // Match your clip shape
-                            spotColor = Color.White.copy(alpha = 0.8f) // Optional shadow color
-                        )
-                        .clip(RoundedCornerShape(20.dp))
+                SongThumbnail(
+                    thumbnail = song.thumbnail,
+                    cardWidth = cardWidth,
+                    drawableId = R.drawable.album1
                 )
+
                 Spacer(modifier = Modifier.height(26.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
-                            navController.navigate(Screen.PlayMusic.createRoute(song!!))
+                            navController.navigate(Screen.PlayMusic.createRoute(song))
                         }
                 ) {
 
@@ -155,12 +194,13 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                             color = Color.White.copy(alpha = .4f)
                         )
                     }
+                    Spacer(modifier = Modifier.width(26.dp))
                     Box(
                         modifier = Modifier
                             .height(70.dp)
                     ) {
                         Image(
-                            painter = painterResource(id = if (song?.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
+                            painter = painterResource(id = if (song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
                             contentDescription = "favorite",
                             modifier = Modifier
                                 .size(30.dp)
@@ -177,20 +217,31 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                         .height(40.dp),
                     waveColor = Color(0xFF7B57E4),
                     inactiveWaveColor = Color(0xFFFFFFFF),
-                    onProgressChange = { newProgress -> progress = newProgress },
+                    amplitudes = waveformData,
+                    onProgressChange = { newProgress ->
+                        // Handle user seeking
+                        progress = newProgress
+                        audioPlayer.seekTo((newProgress * duration).toInt())
+                    }
                 )
                 Spacer(modifier = Modifier.height(10.dp))
-                Row {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Current position (left-aligned)
                     Text(
                         modifier = Modifier.weight(1f),
-                        text = "1:04",
+                        text = formatTime(currentPosition), // Format milliseconds to MM:SS
                         fontSize = 16.sp,
                         color = Color(0xFF7B57E4)
                     )
+
+                    // Duration (right-aligned)
                     Text(
-                        text = "3:29",
+                        text = formatTime(duration),
                         fontSize = 16.sp,
-                        color = Color.White.copy(alpha = .4f)
+                        color = Color.White.copy(alpha = 0.4f)
                     )
                 }
                 Spacer(modifier = Modifier.height(26.dp))
@@ -201,32 +252,46 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                     Image(
                         painter = painterResource(id = R.drawable.random_display),
                         contentDescription = "play randoms",
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(controlIconSize)
                     )
+                    Spacer(modifier = Modifier.width(0.dp))
                     Image(
                         painter = painterResource(id = R.drawable.play_prev),
                         contentDescription = "play prev",
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(controlIconSize)
                     )
                     Box(
                         modifier = Modifier .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
                         GradientPlayPauseButton(
-                            isPlaying = isPlaying,
-                            onToggle = { isPlaying = !isPlaying },
-                            modifier = Modifier.padding(16.dp)
+                            isPlaying = audioPlayer.isPlaying(),
+                            onToggle = {
+                                if (audioPlayer.isPlaying()){
+                                    audioPlayer.pause()
+                                    isPaused = true
+                                }else if (isPaused){
+                                    audioPlayer.resume()
+                                    isPaused = false
+                                }else{
+                                audioPlayer.playAudioFile(song.filePath, onAmplitudesUpdate = onAmplitudeUpdated)
+                                    isPaused = false
+                                }
+
+                                       },
+                            modifier = Modifier.padding(10.dp)
                         )
                     }
                     Image(
                         painter = painterResource(id = R.drawable.play_next),
                         contentDescription = "play next",
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(controlIconSize)
                     )
+                    Spacer(modifier = Modifier.width(0.dp))
                     Image(
                         painter = painterResource(id = R.drawable.repeat_all),
                         contentDescription = "repeat",
-                        modifier = Modifier.size(30.dp)
+                        modifier = Modifier.size(controlIconSize)
                     )
                 }
             }
@@ -249,7 +314,7 @@ fun GradientPlayPauseButton(
 
     Box(
         modifier = modifier
-            .size(80.dp)
+            .size(70.dp)
             .background(gradient, CircleShape)
             .padding(start = if (isPlaying)0.dp else 5.dp)
             .clickable(onClick = onToggle),
@@ -262,12 +327,14 @@ fun GradientPlayPauseButton(
         )
     }
 }
+@Preview
 @Composable
 fun WaveformProgress(
-    progress: Float,
-    onProgressChange: (Float) -> Unit,
+    progress: Float = .7f,
+    amplitudes: List<Float> = List(size = 7) {2F},
+    onProgressChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
-    waveColor: Color = Color.Blue,
+    waveColor: Color = Color(0xFF7B57E4),
     inactiveWaveColor: Color = waveColor.copy(alpha = 0.3f),
     waveCount: Int = 50,
     waveHeight: Dp = 50.dp,
@@ -275,11 +342,11 @@ fun WaveformProgress(
 ) {
     val density = LocalDensity.current
     val waveGapPx = with(density) { waveGap.toPx() }
+    val waveHeightPx = with(density) { waveHeight.toPx() }
 
     Box(
         modifier = modifier
             .height(waveHeight)
-
             .pointerInput(Unit) {
                 detectTapGestures { tapOffset ->
                     val clickedProgress = (tapOffset.x / size.width).coerceIn(0f, 1f)
@@ -288,6 +355,18 @@ fun WaveformProgress(
             }
     ) {
         Canvas(modifier = Modifier.fillMaxSize()) {
+            if (amplitudes.isEmpty()) return@Canvas
+
+            // Calculate how many amplitude samples to use per visual wave
+            val samplesPerWave = (amplitudes.size / waveCount).coerceAtLeast(1)
+            val maxAmplitude = amplitudes.maxOrNull() ?: 1f
+            println(maxAmplitude)
+            val normalizedAmplitudes = if (maxAmplitude > 0) {
+                amplitudes.map { it / maxAmplitude }
+            } else {
+                amplitudes
+            }
+
             val totalGapWidth = waveGapPx * (waveCount - 1)
             val availableWidth = size.width - totalGapWidth
             val waveWidth = availableWidth / waveCount
@@ -295,14 +374,27 @@ fun WaveformProgress(
             val activeWaves = (waveCount * progress).coerceIn(0f, waveCount.toFloat())
 
             repeat(waveCount) { i ->
+                // Calculate average amplitude for this wave segment
+                val startSample = i * samplesPerWave
+                val endSample = (i + 1) * samplesPerWave
+                val segmentAmplitudes = amplitudes.subList(
+                    startSample.coerceAtMost(amplitudes.lastIndex),
+                    endSample.coerceAtMost(amplitudes.size)
+                )
+
+                val averageAmplitude = if (segmentAmplitudes.isNotEmpty()) {
+                    segmentAmplitudes.average().toFloat()
+                } else {
+                    0.5f
+                }
                 val isActive = i < activeWaves
-                val waveHeightPx = waveHeight.toPx() * (0.5f + 0.5f * sin(i * 0.5f).absoluteValue)
+                val currentWaveHeight = waveHeightPx * averageAmplitude.coerceIn(0.1f, 1f)
                 val xPos = i * (waveWidth + waveGapPx)
 
                 drawRoundRect(
                     color = if (isActive) waveColor else inactiveWaveColor,
-                    topLeft = Offset(x = xPos, y = (size.height - waveHeightPx) / 2),
-                    size = Size(width = waveWidth, height = waveHeightPx),
+                    topLeft = Offset(x = xPos, y = (size.height - currentWaveHeight) / 2),
+                    size = Size(width = waveWidth, height = currentWaveHeight),
                     cornerRadius = CornerRadius(waveWidth * 0.4f)
                 )
             }

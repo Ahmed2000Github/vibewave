@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -12,10 +13,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -31,19 +34,23 @@ import com.example.vibewave.presentation.state.RecentMusicState
 import com.example.vibewave.presentation.ui.components.SongCard
 import com.example.vibewave.presentation.viewmodels.RecentlyPlayedViewModel
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 
 
 @Composable
 fun MusicListScreen(navController: NavController,viewModel: RecentlyPlayedViewModel = hiltViewModel()) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     val testSong = Song(
         id = "song_123",
         title = "Bohemian Rhapsody",
         artist = "Queen",
         duration = 354000, // 5:54 minutes
-        uri = "content://media/external/audio/media/123",
-        albumArtUri = "https://example.com/queen_album.jpg",
+        filePath = "content://media/external/audio/media/123",
+        thumbnail = null,
         isFavorite = false
     )
     val state by viewModel.state.collectAsState()
@@ -61,38 +68,52 @@ fun MusicListScreen(navController: NavController,viewModel: RecentlyPlayedViewMo
                 .padding(top = 16.dp)
         ) {
             Column {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Back",
-                    modifier = Modifier.size(24.dp)
-                        .clickable {
-                            Toast.makeText(
-                                context,
-                                "Back button clicked",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                            navController.popBackStack()
-                        },
-                    tint = Color.White
-                )
+                Row {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = "Back",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable {
+                                Toast.makeText(
+                                    context,
+                                    "Back button clicked",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                navController.popBackStack()
+                            },
+                        tint = Color.White
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Back",
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clickable {
+                                coroutineScope.launch {
+                                    viewModel.refreshSongs()
+                                }
+                            },
+                        tint = Color.White
+                    )
+                }
                 Spacer(modifier = Modifier.height(26.dp))
                 when (val currentState = state) {
                     is RecentMusicState.Loading -> Text(text="loading ...",color=Color.White)
-                    is RecentMusicState.Success -> Text(text=" Data is here",color=Color.White)
+                    is RecentMusicState.Success ->
+                        LazyColumn (  modifier = Modifier.fillMaxSize(),
+                            verticalArrangement = Arrangement.spacedBy(30.dp)) {
+                            items(currentState.songs.size) { index ->
+                                SongCard(
+                                    navController = navController,
+                                    song = currentState.songs[index]
+                                )
+                            }
+                    }
                     is RecentMusicState.Error -> Text(text= currentState.message ?:"Null Error",color=Color.White)
                 }
                 Spacer(modifier = Modifier.height(26.dp))
-                Column (
-                    modifier = Modifier
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(30.dp)
-                ) {
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                }
             }
         }
 

@@ -1,4 +1,4 @@
-package com.example.vibewave.data.local.dao
+package com.example.vibewave.data.local.database.dao
 
 import androidx.room.*
 import com.example.vibewave.data.local.entities.SongEntity
@@ -9,7 +9,7 @@ interface SongDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(song: SongEntity)
 
-    @Query("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 20")
+    @Query("SELECT * FROM songs ORDER BY duration DESC LIMIT 20")
     fun getSongs(): Flow<List<SongEntity>>
 
     @Query("DELETE FROM songs WHERE id = :songId")

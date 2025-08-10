@@ -10,8 +10,10 @@ class SongMapper {
             title = entity.title,
             artist = entity.artist,
             duration = entity.duration,
-            uri = entity.uri,
-            timestamp = entity.timestamp,
+            filePath = entity.filePath,
+            thumbnail = entity.thumbnail,
+            isFavorite = entity.isFavorite,
+            lastPlayed = entity.lastPlayed,
         )
     }
 
@@ -21,8 +23,10 @@ class SongMapper {
             title = domain.title,
             artist = domain.artist,
             duration = domain.duration,
-            uri = domain.uri,
-            timestamp = domain.timestamp,
+            filePath = domain.filePath,
+            thumbnail = domain.thumbnail,
+            isFavorite = domain.isFavorite,
+            lastPlayed = domain.lastPlayed,
         )
     }
 }

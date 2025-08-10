@@ -1,5 +1,6 @@
 package com.example.vibewave.presentation.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -9,6 +10,7 @@ import com.example.vibewave.presentation.ui.screens.HomeScreen
 import com.example.vibewave.presentation.ui.screens.MusicListScreen
 import com.example.vibewave.presentation.ui.screens.PlayMusicScreen
 import com.example.vibewave.presentation.ui.screens.WelcomeScreen
+import com.google.gson.Gson
 
 
 @Composable
@@ -27,18 +29,18 @@ fun AppNavHost(navController: NavHostController) {
             MusicListScreen(navController)
         }
         composable(Screen.PlayMusic.route) { backStackEntry ->
-//            val jsonSong = backStackEntry.arguments?.getString("song") ?: ""
-//            val song = Gson().fromJson(Uri.decode(jsonSong), SongModel::class.java)
-            val testSong = Song(
-                id = "song_123",
-                title = "Bohemian Rhapsody",
-                artist = "Queen",
-                duration = 354000, // 5:54 minutes
-                uri = "content://media/external/audio/media/123",
-                albumArtUri = "https://example.com/queen_album.jpg",
-                isFavorite = true
-            )
-            PlayMusicScreen(navController,song = testSong)
+            val jsonSong = backStackEntry.arguments?.getString("song") ?: ""
+            val song = Gson().fromJson(Uri.decode(jsonSong), Song::class.java)
+//            val testSong = Song(
+//                id = "song_123",
+//                title = "Bohemian Rhapsody",
+//                artist = "Queen",
+//                duration = 354000, // 5:54 minutes
+//                filePath = "content://media/external/audio/media/123",
+//                thumbnail = null,
+//                isFavorite = true
+//            )
+            PlayMusicScreen(navController,song = song)
         }
     }
 }

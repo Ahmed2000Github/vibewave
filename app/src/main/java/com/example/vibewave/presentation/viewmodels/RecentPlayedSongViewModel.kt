@@ -3,8 +3,10 @@ package com.example.vibewave.presentation.viewmodels
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibewave.domain.usecases.GetRecentlyPlayedSongsUseCase
+import com.example.vibewave.domain.usecases.LoadDeviceSongsUseCase
 import com.example.vibewave.presentation.state.RecentMusicState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
@@ -13,7 +15,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class RecentlyPlayedViewModel @Inject constructor(
-    private val getRecentlyPlayedSongsUseCase: GetRecentlyPlayedSongsUseCase
+    private val getRecentlyPlayedSongsUseCase: GetRecentlyPlayedSongsUseCase,
+    private val loadDeviceSongsUseCase: LoadDeviceSongsUseCase
 ) : ViewModel() {
 
     private val _state = MutableStateFlow<RecentMusicState>(RecentMusicState.Loading)
@@ -22,9 +25,16 @@ class RecentlyPlayedViewModel @Inject constructor(
     init {
         loadSongs()
     }
-
+    suspend fun refreshSongs() {
+            _state.value = RecentMusicState.Loading
+            loadDeviceSongsUseCase()
+        _state.value = RecentMusicState.Error("Songs loaded")
+            loadSongs()
+    }
     private fun loadSongs() {
         viewModelScope.launch {
+
+            delay(1000)
             getRecentlyPlayedSongsUseCase()
                 .catch { e -> _state.value = RecentMusicState.Error(e.message ?: "Unknown error") }
                 .collect { songs ->

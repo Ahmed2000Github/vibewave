@@ -11,3 +11,4 @@ class GetRecentlyPlayedSongsUseCase(
         return repository.getRecentlyPlayedSongs()
     }
 }
+

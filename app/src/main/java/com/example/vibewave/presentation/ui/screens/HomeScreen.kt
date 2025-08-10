@@ -47,8 +47,8 @@ fun HomeScreen(navController: NavController) {
         title = "Bohemian Rhapsody",
         artist = "Queen",
         duration = 354000, // 5:54 minutes
-        uri = "content://media/external/audio/media/123",
-        albumArtUri = "https://example.com/queen_album.jpg",
+        filePath = "content://media/external/audio/media/123",
+        thumbnail = null,
         isFavorite = true
     )
     Scaffold(
