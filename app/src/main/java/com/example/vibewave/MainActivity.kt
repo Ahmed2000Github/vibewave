@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
             .show()
     }
 
+    @Deprecated("Deprecated in Java")
     @RequiresApi(Build.VERSION_CODES.M)
     override fun onRequestPermissionsResult(
         requestCode: Int,
@@ -85,6 +86,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @RequiresApi(Build.VERSION_CODES.JELLY_BEAN)
     private fun openAppSettings() {
         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
             data = Uri.fromParts("package", packageName, null)

@@ -10,8 +10,7 @@ data class SongEntity(
     val title: String,
     val artist: String,
     val filePath: String,
-    @ColumnInfo(typeAffinity = ColumnInfo.BLOB)
-    val thumbnail: ByteArray? = null,
+    val thumbnail: String? = null,
     val duration: Long,
     val isFavorite: Boolean = false,
     val lastPlayed: Long? = null,
@@ -42,7 +41,7 @@ data class SongEntity(
         result = 31 * result + title.hashCode()
         result = 31 * result + artist.hashCode()
         result = 31 * result + filePath.hashCode()
-        result = 31 * result + (thumbnail?.contentHashCode() ?: 0)
+        result = 31 * result + (thumbnail?.hashCode() ?: 0)
         return result
     }
 }

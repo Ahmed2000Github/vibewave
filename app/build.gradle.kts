@@ -66,6 +66,7 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     ksp("androidx.room:room-compiler:2.6.1")
     implementation("androidx.hilt:hilt-navigation-compose:1.2.0")
+    implementation("com.github.lincollincol:Amplituda:2.2.2")
 
 
 

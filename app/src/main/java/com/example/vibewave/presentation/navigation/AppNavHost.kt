@@ -40,7 +40,7 @@ fun AppNavHost(navController: NavHostController) {
 //                thumbnail = null,
 //                isFavorite = true
 //            )
-            PlayMusicScreen(navController,song = song)
+            PlayMusicScreen(navController,initialSong = song)
         }
     }
 }

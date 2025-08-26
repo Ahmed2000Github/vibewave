@@ -36,6 +36,7 @@ import com.example.vibewave.presentation.viewmodels.RecentlyPlayedViewModel
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.vibewave.presentation.ui.components.SongCardSkeleton
 import kotlinx.coroutines.launch
 
 
@@ -43,16 +44,6 @@ import kotlinx.coroutines.launch
 fun MusicListScreen(navController: NavController,viewModel: RecentlyPlayedViewModel = hiltViewModel()) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-
-    val testSong = Song(
-        id = "song_123",
-        title = "Bohemian Rhapsody",
-        artist = "Queen",
-        duration = 354000, // 5:54 minutes
-        filePath = "content://media/external/audio/media/123",
-        thumbnail = null,
-        isFavorite = false
-    )
     val state by viewModel.state.collectAsState()
 
 
@@ -100,14 +91,19 @@ fun MusicListScreen(navController: NavController,viewModel: RecentlyPlayedViewMo
                 }
                 Spacer(modifier = Modifier.height(26.dp))
                 when (val currentState = state) {
-                    is RecentMusicState.Loading -> Text(text="loading ...",color=Color.White)
+                    is RecentMusicState.Loading -> LazyColumn (  modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(30.dp)) {
+                        items(10) { index ->
+                            SongCardSkeleton()
+                        }
+                    }
                     is RecentMusicState.Success ->
                         LazyColumn (  modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.spacedBy(30.dp)) {
                             items(currentState.songs.size) { index ->
                                 SongCard(
                                     navController = navController,
-                                    song = currentState.songs[index]
+                                    initialSong = currentState.songs[index]
                                 )
                             }
                     }

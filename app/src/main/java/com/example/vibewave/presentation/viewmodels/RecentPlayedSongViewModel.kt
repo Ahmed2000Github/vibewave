@@ -23,18 +23,15 @@ class RecentlyPlayedViewModel @Inject constructor(
     val state: StateFlow<RecentMusicState> = _state
 
     init {
-        loadSongs()
+        getRecentlyPlayedSongs()
     }
     suspend fun refreshSongs() {
             _state.value = RecentMusicState.Loading
             loadDeviceSongsUseCase()
-        _state.value = RecentMusicState.Error("Songs loaded")
-            loadSongs()
+            getRecentlyPlayedSongs()
     }
-    private fun loadSongs() {
+    private fun getRecentlyPlayedSongs() {
         viewModelScope.launch {
-
-            delay(1000)
             getRecentlyPlayedSongsUseCase()
                 .catch { e -> _state.value = RecentMusicState.Error(e.message ?: "Unknown error") }
                 .collect { songs ->

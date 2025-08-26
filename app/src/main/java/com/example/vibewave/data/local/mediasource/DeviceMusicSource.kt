@@ -4,13 +4,18 @@ import android.content.ContentResolver
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
+import android.os.Build
 import android.provider.MediaStore
+import android.util.Log
+import androidx.annotation.RequiresApi
 import com.example.vibewave.data.local.entities.MusicFileEntity
+import java.io.File
 
 
 class DeviceMusicSource(
     private val contentResolver: ContentResolver
 ) {
+    @RequiresApi(Build.VERSION_CODES.N)
     fun getAllDeviceSongs(): List<MusicFileEntity> {
         val songs = mutableListOf<MusicFileEntity>()
         val projection = arrayOf(
@@ -34,30 +39,44 @@ class DeviceMusicSource(
         )?.use { cursor ->
 
             while (cursor.moveToNext()) {
-                    println("______________________________________________________")
-                for (i in 0..6) {
-                    println(cursor.getString(i))
+                val filePath = cursor.getString(4)
+                if (filePath != null && File(filePath).exists() && cursor.getLong(3) != 0L) {
+                        songs.add(
+                            MusicFileEntity(
+                                id = cursor.getLong(0).toString(),
+                                title = cursor.getString(1) ?: "Unknown",
+                                artist = cursor.getString(2) ?: "Unknown",
+                                duration = cursor.getLong(3),
+                                filePath = cursor.getString(4),
+                                thumbnail = extractThumbnailFromMp3(cursor.getString(4))
+                            )
+                        )
+
                 }
-                    println("______________________________________________________")
-                songs.add(
-                    MusicFileEntity(
-                        id = cursor.getLong(0).toString(),
-                        title = cursor.getString(1) ?: "Unknown",
-                        artist = cursor.getString(2) ?: "Unknown",
-                        duration = cursor.getLong(3),
-                        filePath = cursor.getString(4),
-                        thumbnail = extractThumbnailFromMp3(cursor.getString(4))
-                    )
-                )
+
             }
         }
         return songs
     }
-    private fun extractThumbnailFromMp3(filePath: String): ByteArray? {
+    private fun extractThumbnailFromMp3(filePath: String): String? {
         val retriever = MediaMetadataRetriever()
         return try {
             retriever.setDataSource(filePath)
-            retriever.embeddedPicture // Returns ByteArray or null
+            val embeddedPicture = retriever.embeddedPicture
+
+            embeddedPicture?.let { imageData ->
+                // Use system temp directory (doesn't require Context)
+                val tempFile = File.createTempFile(
+                    "thumb_${System.currentTimeMillis()}",
+                    ".jpg"
+                )
+
+                tempFile.outputStream().use { output ->
+                    output.write(imageData)
+                }
+
+                tempFile.absolutePath
+            }
         } catch (e: Exception) {
             null
         } finally {

@@ -9,5 +9,5 @@ interface SongsRepository {
     fun getSongs(): Flow<List<Song>>
     fun getRecentlyPlayedSongs(): Flow<List<Song>>
     fun getFavoriteSongs(): Flow<List<Song>>
-    suspend fun addToFavorite(songId: String)
+    suspend fun toggleFavorite(songId: String):Flow<Song>
 }

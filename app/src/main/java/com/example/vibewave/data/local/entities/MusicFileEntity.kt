@@ -9,7 +9,7 @@ data class MusicFileEntity(
     val title: String,
     val artist: String,
     val filePath: String,
-    val thumbnail: ByteArray? = null,
+    val thumbnail: String? = null,
     val duration: Long,
     val isFavorite: Boolean = false,
     val lastPlayed: Long? = null,

@@ -10,8 +10,10 @@ import com.example.vibewave.data.mappers.DeviceMusicMapper
 import com.example.vibewave.data.mappers.SongMapper
 import com.example.vibewave.data.repositories.SongsRepositoryImpl
 import com.example.vibewave.domain.repositories.SongsRepository
+import com.example.vibewave.domain.usecases.GetAllSongsUseCase
 import com.example.vibewave.domain.usecases.GetRecentlyPlayedSongsUseCase
 import com.example.vibewave.domain.usecases.LoadDeviceSongsUseCase
+import com.example.vibewave.domain.usecases.ToggleSongFavoriteUseCase
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -87,5 +89,17 @@ object ViewModelModule {
         repository: SongsRepository
     ): LoadDeviceSongsUseCase {
         return LoadDeviceSongsUseCase(repository)
+    }
+    @Provides
+    fun provideGetAllSongsUseCase(
+        repository: SongsRepository
+    ): GetAllSongsUseCase {
+        return GetAllSongsUseCase(repository)
+    }
+    @Provides
+    fun provideToggleSongFavoriteUseCase(
+        repository: SongsRepository
+    ): ToggleSongFavoriteUseCase {
+        return ToggleSongFavoriteUseCase(repository)
     }
 }

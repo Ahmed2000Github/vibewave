@@ -19,16 +19,18 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -37,15 +39,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -56,18 +55,26 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.vibewave.R
 import com.example.vibewave.domain.models.Song
-import com.example.vibewave.presentation.navigation.Screen
+import com.example.vibewave.presentation.state.SongCardState
 import com.example.vibewave.presentation.ui.components.SongThumbnail
+import com.example.vibewave.presentation.viewmodels.SongCardViewModel
 import com.example.vibewave.utils.AudioPlayerService
 import com.example.vibewave.utils.FormatUtils.formatTime
-import kotlin.math.absoluteValue
-import kotlin.math.sin
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import linc.com.amplituda.Amplituda
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
 @Composable
-fun PlayMusicScreen(navController: NavController, song: Song) {
+fun PlayMusicScreen(navController: NavController, initialSong: Song) {
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val screenWidth = configuration.screenWidthDp.dp
@@ -76,14 +83,31 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
     var waveformData by remember { mutableStateOf<List<Float>>(emptyList()) }
     var duration by remember { mutableIntStateOf(1) }
     var currentPosition by remember { mutableIntStateOf(0) }
+    var isPlaying by remember { mutableStateOf(true) }
     var isPaused by remember { mutableStateOf(false) }
     val cardWidth = (screenWidth - (32.dp))
     val controlIconSize = 25.dp
     val onAmplitudeUpdated:(amplitudes: List<Float>)->Unit = {
             amplitudes -> waveformData = amplitudes
     }
-    val audioPlayer = remember {
-        AudioPlayerService(context).apply {
+    var audioPlayer:AudioPlayerService? = null
+    val viewModel: SongCardViewModel = hiltViewModel(
+        key = "song_card_${initialSong.id}"
+    )
+    val state by viewModel.state.collectAsState()
+    val song by remember(state) {
+        derivedStateOf {
+            when (val currentState = state) {
+                is SongCardState.Success -> {
+                    currentState.song
+                }
+                else -> initialSong
+            }
+        }
+    }
+    LaunchedEffect(song.filePath) {
+
+        audioPlayer = AudioPlayerService(context).apply {
             setProgressUpdateListener { currentPos, totalDuration ->
                 duration = totalDuration
                 currentPosition = currentPos
@@ -92,22 +116,48 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                 } else 0f
             }
         }
-    }
-    LaunchedEffect(song.filePath) {
-        try {
-//            waveformData = WaveformUtils.extractWaveformData(context, song.filePath)
-            audioPlayer.playAudioFile(song.filePath, onAmplitudesUpdate = onAmplitudeUpdated)
-        } catch (e: Exception) {
-            println("Failed to play: ${e.message}")
-//            playerError = "Failed to play: ${e.message}"
+        coroutineScope {
+            val amplitudeJob = launch(Dispatchers.IO) {
+                try {
+                    val amplituda = Amplituda(context)
+                    val result = suspendCoroutine { continuation ->
+                        amplituda.processAudio(song.filePath)
+                            .get({ result ->
+                                continuation.resume(result)
+                            }, { exception ->
+                                continuation.resumeWithException(exception ?: Exception("Unknown error"))
+                            })
+                    }
+
+                    val amplitudesData: List<Int> = result.amplitudesAsList()
+                    waveformData = amplitudesData.map { it.toFloat() }
+
+                } catch (e: Exception) {
+                    println("Failed to process amplitudes: ${e.message}")
+                }
+            }
+
+            val playerJob = launch(Dispatchers.IO) {
+                try {
+                    audioPlayer.playAudioFile(song.filePath,onCompletion={
+                        isPlaying = false
+                    })
+                } catch (e: Exception) {
+                    println("Failed to play: ${e.message}")
+                }
+            }
+
+            // Wait for both jobs to complete or handle cancellation
+            joinAll(amplitudeJob, playerJob)
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            audioPlayer.cleanup()
+            audioPlayer?.cleanup()
         }
     }
+
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars
     ) { innerPadding ->
@@ -131,7 +181,7 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                         modifier = Modifier
                             .size(30.dp)
                             .clickable {
-                                audioPlayer.cleanup()
+                                audioPlayer?.cleanup()
                                 navController.popBackStack()
                             },
                         tint = Color.White
@@ -169,9 +219,6 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable {
-                            navController.navigate(Screen.PlayMusic.createRoute(song))
-                        }
                 ) {
 
                     Column(
@@ -198,6 +245,9 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                     Box(
                         modifier = Modifier
                             .height(70.dp)
+                            .clickable {
+                                viewModel.toggleSongFavorite(song.id)
+                            }
                     ) {
                         Image(
                             painter = painterResource(id = if (song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
@@ -210,20 +260,28 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
 
                 }
                 Spacer(modifier = Modifier.height(26.dp))
-                WaveformProgress(
-                    progress = progress,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(40.dp),
-                    waveColor = Color(0xFF7B57E4),
-                    inactiveWaveColor = Color(0xFFFFFFFF),
-                    amplitudes = waveformData,
-                    onProgressChange = { newProgress ->
-                        // Handle user seeking
-                        progress = newProgress
-                        audioPlayer.seekTo((newProgress * duration).toInt())
-                    }
-                )
+                if (waveformData.isEmpty()){
+                    LinearProgressIndicator(
+                        modifier = Modifier.fillMaxWidth()
+                            .height(40.dp),
+                    )
+                }else{
+                    WaveformProgress(
+                        progress = progress,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp),
+                        waveColor = Color(0xFF7B57E4),
+                        inactiveWaveColor = Color(0xFFFFFFFF),
+                        amplitudes = waveformData,
+                        onProgressChange = { newProgress ->
+                            // Handle user seeking
+                            progress = newProgress
+                            audioPlayer?.seekTo((newProgress * duration).toInt())
+                        }
+                    )
+                }
+
                 Spacer(modifier = Modifier.height(10.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -265,17 +323,22 @@ fun PlayMusicScreen(navController: NavController, song: Song) {
                         contentAlignment = Alignment.Center
                     ) {
                         GradientPlayPauseButton(
-                            isPlaying = audioPlayer.isPlaying(),
+                            isPlaying = isPlaying ,
                             onToggle = {
-                                if (audioPlayer.isPlaying()){
+                                if (audioPlayer?.isPlaying() == true){
                                     audioPlayer.pause()
+                                    isPlaying = false
                                     isPaused = true
                                 }else if (isPaused){
-                                    audioPlayer.resume()
+                                    audioPlayer?.resume()
                                     isPaused = false
+                                    isPlaying = true
                                 }else{
-                                audioPlayer.playAudioFile(song.filePath, onAmplitudesUpdate = onAmplitudeUpdated)
+                                    audioPlayer?.playAudioFile(song.filePath,onCompletion={
+                                        isPlaying = false
+                                    })
                                     isPaused = false
+                                    isPlaying = true
                                 }
 
                                        },
@@ -336,8 +399,8 @@ fun WaveformProgress(
     modifier: Modifier = Modifier,
     waveColor: Color = Color(0xFF7B57E4),
     inactiveWaveColor: Color = waveColor.copy(alpha = 0.3f),
-    waveCount: Int = 50,
-    waveHeight: Dp = 50.dp,
+    waveCount: Int = 70,
+    waveHeight: Dp = 70.dp,
     waveGap: Dp = 2.dp
 ) {
     val density = LocalDensity.current
@@ -360,9 +423,10 @@ fun WaveformProgress(
             // Calculate how many amplitude samples to use per visual wave
             val samplesPerWave = (amplitudes.size / waveCount).coerceAtLeast(1)
             val maxAmplitude = amplitudes.maxOrNull() ?: 1f
-            println(maxAmplitude)
-            val normalizedAmplitudes = if (maxAmplitude > 0) {
-                amplitudes.map { it / maxAmplitude }
+            val minAmplitude = amplitudes.minOrNull() ?: 0f
+            val diff = maxAmplitude - minAmplitude
+            val normalizedAmplitudes = if (diff > 0) {
+                amplitudes.map {( it-minAmplitude) / diff }
             } else {
                 amplitudes
             }
@@ -377,9 +441,9 @@ fun WaveformProgress(
                 // Calculate average amplitude for this wave segment
                 val startSample = i * samplesPerWave
                 val endSample = (i + 1) * samplesPerWave
-                val segmentAmplitudes = amplitudes.subList(
-                    startSample.coerceAtMost(amplitudes.lastIndex),
-                    endSample.coerceAtMost(amplitudes.size)
+                val segmentAmplitudes = normalizedAmplitudes.subList(
+                    startSample.coerceAtMost(normalizedAmplitudes.lastIndex),
+                    endSample.coerceAtMost(normalizedAmplitudes.size)
                 )
 
                 val averageAmplitude = if (segmentAmplitudes.isNotEmpty()) {

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,14 +36,25 @@ import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.navigation.Screen
 
 @Composable
-fun SongThumbnail(thumbnail: ByteArray?,cardWidth: Dp,drawableId: Int = R.drawable.album1) {
+fun SongThumbnail(thumbnail: String?,cardWidth: Dp,drawableId: Int = R.drawable.album1) {
     thumbnail?.let { byteArray ->
-        val bitmap = BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
+        val bitmap = remember(thumbnail) {
+            thumbnail.let { path ->
+                BitmapFactory.decodeFile(path)
+            }
+        }
         Image(
             bitmap = bitmap.asImageBitmap(),
             contentDescription = "Song thumbnail",
-            modifier = Modifier.size(cardWidth),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            modifier = Modifier
+                .size(cardWidth)
+                .shadow(
+                    elevation = 10.dp,
+                    shape = RoundedCornerShape(20.dp),
+                    spotColor = Color.White.copy(alpha = 0.8f)
+                )
+                .clip(RoundedCornerShape(20.dp))
         )
     } ?:Image(
     painter = painterResource(id = drawableId ),

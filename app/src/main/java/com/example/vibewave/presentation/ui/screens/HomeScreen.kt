@@ -106,11 +106,11 @@ fun HomeScreen(navController: NavController) {
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(30.dp)
                 ) {
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
-                    SongCard(navController= navController,song = testSong)
+                    SongCard(navController= navController, initialSong = testSong)
+                    SongCard(navController= navController, initialSong = testSong)
+                    SongCard(navController= navController, initialSong = testSong)
+                    SongCard(navController= navController, initialSong = testSong)
+                    SongCard(navController= navController, initialSong = testSong)
 
                 }
             }
