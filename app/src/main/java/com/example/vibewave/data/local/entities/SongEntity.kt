@@ -11,6 +11,7 @@ data class SongEntity(
     val artist: String,
     val filePath: String,
     val thumbnail: String? = null,
+    val drawableThumbnail: Int,
     val duration: Long,
     val isFavorite: Boolean = false,
     val lastPlayed: Long? = null,
@@ -25,6 +26,7 @@ data class SongEntity(
         if (isFavorite != other.isFavorite) return false
         if (lastPlayed != other.lastPlayed) return false
         if (id != other.id) return false
+        if (drawableThumbnail != other.drawableThumbnail) return false
         if (title != other.title) return false
         if (artist != other.artist) return false
         if (filePath != other.filePath) return false

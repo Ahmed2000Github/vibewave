@@ -22,17 +22,13 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -43,14 +39,13 @@ import androidx.navigation.NavController
 import com.example.vibewave.R
 import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.navigation.Screen
-import com.example.vibewave.presentation.state.RecentMusicState
 import com.example.vibewave.presentation.state.SongCardState
-import com.example.vibewave.presentation.viewmodels.SongCardViewModel
+import com.example.vibewave.presentation.viewmodels.SongViewModel
 
 @Composable
 fun SongCard(navController: NavController, initialSong: Song) {
     val cardWidth = 70.dp
-    val viewModel: SongCardViewModel = hiltViewModel(
+    val viewModel: SongViewModel = hiltViewModel(
         key = "song_card_${initialSong.id}"
     )
     val state by viewModel.state.collectAsState()
@@ -58,6 +53,7 @@ fun SongCard(navController: NavController, initialSong: Song) {
         derivedStateOf {
             when (val currentState = state) {
                 is SongCardState.Success -> {
+                    println("1111111111111111111111111111111111111111111111")
                     currentState.song
                 }
                 else -> initialSong
@@ -74,7 +70,7 @@ fun SongCard(navController: NavController, initialSong: Song) {
         SongThumbnail(
             thumbnail = song.thumbnail,
             cardWidth = cardWidth,
-            drawableId = R.drawable.album1
+            drawableId = song.drawableThumbnail
         )
 
         Spacer(modifier = Modifier.width(10.dp))

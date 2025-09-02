@@ -43,31 +43,47 @@ fun SongThumbnail(thumbnail: String?,cardWidth: Dp,drawableId: Int = R.drawable.
                 BitmapFactory.decodeFile(path)
             }
         }
-        Image(
-            bitmap = bitmap.asImageBitmap(),
-            contentDescription = "Song thumbnail",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(cardWidth)
-                .shadow(
-                    elevation = 10.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    spotColor = Color.White.copy(alpha = 0.8f)
-                )
-                .clip(RoundedCornerShape(20.dp))
-        )
-    } ?:Image(
-    painter = painterResource(id = drawableId ),
-    contentDescription = "Song thumbnail",
-    contentScale = ContentScale.Crop,
-    modifier = Modifier
-    .size(cardWidth)
-    .shadow(
-    elevation = 10.dp,
-    shape = RoundedCornerShape(20.dp),
-    spotColor = Color.White.copy(alpha = 0.8f)
-    )
-    .clip(RoundedCornerShape(20.dp))
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Song thumbnail",
+                contentScale = ContentScale.FillBounds,
+                modifier = Modifier
+                    .size(cardWidth)
+                    .shadow(
+                        elevation = 10.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color.White.copy(alpha = 0.8f)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+            )
+        } else {
+            Image(
+                painter = painterResource(id = drawableId),
+                contentDescription = "Song thumbnail",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(cardWidth)
+                    .shadow(
+                        elevation = 10.dp,
+                        shape = RoundedCornerShape(20.dp),
+                        spotColor = Color.White.copy(alpha = 0.8f)
+                    )
+                    .clip(RoundedCornerShape(20.dp))
+            )
+        }
+}?:Image(
+        painter = painterResource(id = drawableId ),
+        contentDescription = "Song thumbnail",
+        contentScale = ContentScale.Crop,
+        modifier = Modifier
+            .size(cardWidth)
+            .shadow(
+                elevation = 10.dp,
+                shape = RoundedCornerShape(20.dp),
+                spotColor = Color.White.copy(alpha = 0.8f)
+            )
+            .clip(RoundedCornerShape(20.dp))
     )
 }
 

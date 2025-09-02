@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 
 
+@RequiresApi(Build.VERSION_CODES.O)
 class SongsRepositoryImpl(
     private val deviceMusicSource: DeviceMusicSource,
     private val songDao: SongDao,
@@ -21,34 +22,32 @@ class SongsRepositoryImpl(
     private val deviceMusicMapper: DeviceMusicMapper
 ) : SongsRepository {
 
-    @RequiresApi(Build.VERSION_CODES.N)
     override suspend fun load() {
         val deviceMusicFound = deviceMusicSource.getAllDeviceSongs()
         val songFound =  deviceMusicFound.map { music -> deviceMusicMapper.mapToSong(music) }
-        songFound.map { song -> songDao.insert(song) }
+        songFound.map { song -> songDao.upsertWithSpecificUpdates(song) }
     }
 
     override fun getSongs(): Flow<List<Song>> {
-        val deviceMusicFound = deviceMusicSource.getAllDeviceSongs()
-        val songsFound = deviceMusicFound.map { music ->
-            deviceMusicMapper.mapToSong(music)
-        }
-        val mappedSongs = songsFound.map { songMapper.mapFromEntity(it) }
-
-        return flow { emit(mappedSongs) }
-//        return dao.getSongs().map { list ->
-//            list.map { songMapper.mapFromEntity(it) }
-//        }
-    }
-
-    override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
         return songDao.getSongs().map { list ->
             list.map { songMapper.mapFromEntity(it) }
         }
     }
 
+    override fun getFilteredSongs(query:String): Flow<List<Song>> {
+        return songDao.getRecentPlayedSongs().map { list ->
+            list.map { songMapper.mapFromEntity(it) }
+        }
+    }
+
+    override fun getRecentlyPlayedSongs(): Flow<List<Song>> {
+        return songDao.getRecentPlayedSongs().map { list ->
+            list.map { songMapper.mapFromEntity(it) }
+        }
+    }
+
     override fun getFavoriteSongs(): Flow<List<Song>> {
-        return songDao.getSongs().map { list ->
+        return songDao.getFavoriteSongs().map { list ->
             list.map { songMapper.mapFromEntity(it) }
         }
     }
@@ -56,5 +55,14 @@ class SongsRepositoryImpl(
     override  suspend fun toggleFavorite(songId: String) :Flow<Song>  {
          songDao.toggleSongFavorite(songId)
         return songDao.getSongById(songId).map { song -> songMapper.mapFromEntity(song) }
+    }
+
+
+    override  suspend fun updateLastPlay(songId: String) :Flow<Song>  {
+         songDao.updateLastPlay(songId, System.currentTimeMillis())
+        return songDao.getSongById(songId).map { song -> songMapper.mapFromEntity(song) }
+    }
+    override suspend fun getRecentSong() :Flow<Song>  {
+        return songDao.getRecentSong().map { song -> songMapper.mapFromEntity(song) }
     }
 }

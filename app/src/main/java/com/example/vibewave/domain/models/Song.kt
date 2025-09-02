@@ -9,6 +9,7 @@ data class Song(
         val artist: String,
         val filePath: String,
         val thumbnail: String? = null,
+        val drawableThumbnail: Int,
         val duration: Long,
         val isFavorite: Boolean = false,
         val lastPlayed: Long? = null,

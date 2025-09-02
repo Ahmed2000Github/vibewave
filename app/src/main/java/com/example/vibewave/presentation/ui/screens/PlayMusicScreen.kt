@@ -1,5 +1,8 @@
 package com.example.vibewave.presentation.ui.screens
 
+import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -18,7 +21,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.MoreVert
@@ -32,17 +34,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
@@ -60,101 +57,67 @@ import androidx.navigation.NavController
 import com.example.vibewave.R
 import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.state.SongCardState
+import com.example.vibewave.presentation.ui.components.GradientPlayPauseButton
 import com.example.vibewave.presentation.ui.components.SongThumbnail
-import com.example.vibewave.presentation.viewmodels.SongCardViewModel
-import com.example.vibewave.utils.AudioPlayerService
+import com.example.vibewave.presentation.viewmodels.AudioPlayerViewModel
+import com.example.vibewave.presentation.viewmodels.GetAllSongsViewModel
+import com.example.vibewave.presentation.viewmodels.SongViewModel
 import com.example.vibewave.utils.FormatUtils.formatTime
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import linc.com.amplituda.Amplituda
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlin.coroutines.suspendCoroutine
 
+@SuppressLint("StateFlowValueCalledInComposition")
+@RequiresApi(Build.VERSION_CODES.O)
 @Composable
-fun PlayMusicScreen(navController: NavController, initialSong: Song) {
+fun PlayMusicScreen(
+    navController: NavController,
+    initialSong: Song?,
+    audioPlayerViewModel: AudioPlayerViewModel,
+    songViewModel: SongViewModel,
+    getAllSongsViewModel: GetAllSongsViewModel
+) {
+
     val configuration = LocalConfiguration.current
     val context = LocalContext.current
     val screenWidth = configuration.screenWidthDp.dp
     val screenHeight = configuration.screenHeightDp.dp
-    var progress by remember { mutableFloatStateOf(0f) }
-    var waveformData by remember { mutableStateOf<List<Float>>(emptyList()) }
-    var duration by remember { mutableIntStateOf(1) }
-    var currentPosition by remember { mutableIntStateOf(0) }
-    var isPlaying by remember { mutableStateOf(true) }
-    var isPaused by remember { mutableStateOf(false) }
+
     val cardWidth = (screenWidth - (32.dp))
     val controlIconSize = 25.dp
-    val onAmplitudeUpdated:(amplitudes: List<Float>)->Unit = {
-            amplitudes -> waveformData = amplitudes
-    }
-    var audioPlayer:AudioPlayerService? = null
-    val viewModel: SongCardViewModel = hiltViewModel(
-        key = "song_card_${initialSong.id}"
-    )
-    val state by viewModel.state.collectAsState()
-    val song by remember(state) {
-        derivedStateOf {
-            when (val currentState = state) {
-                is SongCardState.Success -> {
-                    currentState.song
-                }
-                else -> initialSong
+    fun getDisplayIcon(): Int {
+        return when (audioPlayerViewModel.displayMode.value) {
+            1 -> R.drawable.single_display
+            0 -> R.drawable.random_display
+            else -> {
+                R.drawable.loop_display
             }
         }
     }
-    LaunchedEffect(song.filePath) {
 
-        audioPlayer = AudioPlayerService(context).apply {
-            setProgressUpdateListener { currentPos, totalDuration ->
-                duration = totalDuration
-                currentPosition = currentPos
-                progress = if (totalDuration > 0) {
-                    currentPos.toFloat() / totalDuration.toFloat()
-                } else 0f
+    fun getRepeatIcon(): Int {
+        return when (audioPlayerViewModel.loopCount.value) {
+            1 -> R.drawable.repeat_this
+            0 -> R.drawable.repeat_all
+            else -> {
+                R.drawable.repeat_infinity
             }
         }
-        coroutineScope {
-            val amplitudeJob = launch(Dispatchers.IO) {
-                try {
-                    val amplituda = Amplituda(context)
-                    val result = suspendCoroutine { continuation ->
-                        amplituda.processAudio(song.filePath)
-                            .get({ result ->
-                                continuation.resume(result)
-                            }, { exception ->
-                                continuation.resumeWithException(exception ?: Exception("Unknown error"))
-                            })
-                    }
+    }
 
-                    val amplitudesData: List<Int> = result.amplitudesAsList()
-                    waveformData = amplitudesData.map { it.toFloat() }
-
-                } catch (e: Exception) {
-                    println("Failed to process amplitudes: ${e.message}")
-                }
-            }
-
-            val playerJob = launch(Dispatchers.IO) {
-                try {
-                    audioPlayer.playAudioFile(song.filePath,onCompletion={
-                        isPlaying = false
-                    })
-                } catch (e: Exception) {
-                    println("Failed to play: ${e.message}")
-                }
-            }
-
-            // Wait for both jobs to complete or handle cancellation
-            joinAll(amplitudeJob, playerJob)
+    val songCardState by songViewModel.state.collectAsState()
+    val song = remember(songCardState) {
+        initialSong ?: audioPlayerViewModel.currentSong.value!!
+    }
+    LaunchedEffect("") {
+        if (initialSong != null){
+            audioPlayerViewModel.setCurrentSong(song)
+            getAllSongsViewModel.updateSong(song)
+            songViewModel.updateLastPlay(song.id)
+            audioPlayerViewModel.config()
         }
     }
 
     DisposableEffect(Unit) {
         onDispose {
-            audioPlayer?.cleanup()
+//            audioPlayer?.cleanup()
         }
     }
 
@@ -181,7 +144,6 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                         modifier = Modifier
                             .size(30.dp)
                             .clickable {
-                                audioPlayer?.cleanup()
                                 navController.popBackStack()
                             },
                         tint = Color.White
@@ -212,7 +174,7 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                 SongThumbnail(
                     thumbnail = song.thumbnail,
                     cardWidth = cardWidth,
-                    drawableId = R.drawable.album1
+                    drawableId = song.drawableThumbnail
                 )
 
                 Spacer(modifier = Modifier.height(26.dp))
@@ -246,7 +208,7 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                         modifier = Modifier
                             .height(70.dp)
                             .clickable {
-                                viewModel.toggleSongFavorite(song.id)
+                                songViewModel.toggleSongFavorite(song.id)
                             }
                     ) {
                         Image(
@@ -260,24 +222,25 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
 
                 }
                 Spacer(modifier = Modifier.height(26.dp))
-                if (waveformData.isEmpty()){
+                if (audioPlayerViewModel.waveformData.value.isEmpty()) {
                     LinearProgressIndicator(
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
                             .height(40.dp),
                     )
-                }else{
+                } else {
                     WaveformProgress(
-                        progress = progress,
+                        progress = audioPlayerViewModel.progress.value,
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(40.dp),
                         waveColor = Color(0xFF7B57E4),
                         inactiveWaveColor = Color(0xFFFFFFFF),
-                        amplitudes = waveformData,
-                        onProgressChange = { newProgress ->
-                            // Handle user seeking
-                            progress = newProgress
-                            audioPlayer?.seekTo((newProgress * duration).toInt())
+                        amplitudes = audioPlayerViewModel.waveformData.value,
+                        onProgressChange = { progress ->
+                            audioPlayerViewModel.changeProgress(
+                                progress
+                            )
                         }
                     )
                 }
@@ -290,27 +253,28 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                     // Current position (left-aligned)
                     Text(
                         modifier = Modifier.weight(1f),
-                        text = formatTime(currentPosition), // Format milliseconds to MM:SS
+                        text = formatTime(audioPlayerViewModel.currentPosition.value),
                         fontSize = 16.sp,
                         color = Color(0xFF7B57E4)
                     )
 
-                    // Duration (right-aligned)
                     Text(
-                        text = formatTime(duration),
+                        text = formatTime(audioPlayerViewModel.duration.value.toLong()),
                         fontSize = 16.sp,
                         color = Color.White.copy(alpha = 0.4f)
                     )
                 }
                 Spacer(modifier = Modifier.height(26.dp))
-                Row (
+                Row(
                     horizontalArrangement = Arrangement.spacedBy(20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Image(
-                        painter = painterResource(id = R.drawable.random_display),
+                        painter = painterResource(id = getDisplayIcon()),
                         contentDescription = "play randoms",
-                        modifier = Modifier.size(controlIconSize)
+                        modifier = Modifier
+                            .size(controlIconSize)
+                            .clickable { audioPlayerViewModel.changeDisplayMode() }
                     )
                     Spacer(modifier = Modifier.width(0.dp))
                     Image(
@@ -319,29 +283,12 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                         modifier = Modifier.size(controlIconSize)
                     )
                     Box(
-                        modifier = Modifier .weight(1f),
+                        modifier = Modifier.size(100.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         GradientPlayPauseButton(
-                            isPlaying = isPlaying ,
-                            onToggle = {
-                                if (audioPlayer?.isPlaying() == true){
-                                    audioPlayer.pause()
-                                    isPlaying = false
-                                    isPaused = true
-                                }else if (isPaused){
-                                    audioPlayer?.resume()
-                                    isPaused = false
-                                    isPlaying = true
-                                }else{
-                                    audioPlayer?.playAudioFile(song.filePath,onCompletion={
-                                        isPlaying = false
-                                    })
-                                    isPaused = false
-                                    isPlaying = true
-                                }
-
-                                       },
+                            isPlaying = audioPlayerViewModel.isPlaying.value,
+                            onToggle = { audioPlayerViewModel.toggle() },
                             modifier = Modifier.padding(10.dp)
                         )
                     }
@@ -352,9 +299,11 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
                     )
                     Spacer(modifier = Modifier.width(0.dp))
                     Image(
-                        painter = painterResource(id = R.drawable.repeat_all),
+                        painter = painterResource(id = getRepeatIcon()),
                         contentDescription = "repeat",
-                        modifier = Modifier.size(controlIconSize)
+                        modifier = Modifier
+                            .size(controlIconSize)
+                            .clickable { audioPlayerViewModel.changeLoopCount() }
                     )
                 }
             }
@@ -363,38 +312,12 @@ fun PlayMusicScreen(navController: NavController, initialSong: Song) {
 
 
 }
-@Composable
-fun GradientPlayPauseButton(
-    isPlaying: Boolean,
-    onToggle: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val gradient = Brush.linearGradient(
-        colors = listOf(Color(0xFF7E5EDA), Color(0xFFAC8FFD)),
-        start = Offset(0f, 50f),
-        end = Offset(50f, 0f)
-    )
 
-    Box(
-        modifier = modifier
-            .size(70.dp)
-            .background(gradient, CircleShape)
-            .padding(start = if (isPlaying)0.dp else 5.dp)
-            .clickable(onClick = onToggle),
-        contentAlignment = Alignment.Center
-    ) {
-        Image(
-            painter = painterResource(id = if (isPlaying) R.drawable.pause else R.drawable.play),
-            contentDescription = if (isPlaying) "Pause" else "Play",
-            modifier = Modifier.size(30.dp)
-        )
-    }
-}
 @Preview
 @Composable
 fun WaveformProgress(
     progress: Float = .7f,
-    amplitudes: List<Float> = List(size = 7) {2F},
+    amplitudes: List<Float> = List(size = 7) { 2F },
     onProgressChange: (Float) -> Unit = {},
     modifier: Modifier = Modifier,
     waveColor: Color = Color(0xFF7B57E4),
@@ -426,7 +349,7 @@ fun WaveformProgress(
             val minAmplitude = amplitudes.minOrNull() ?: 0f
             val diff = maxAmplitude - minAmplitude
             val normalizedAmplitudes = if (diff > 0) {
-                amplitudes.map {( it-minAmplitude) / diff }
+                amplitudes.map { (it - minAmplitude) / diff }
             } else {
                 amplitudes
             }

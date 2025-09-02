@@ -18,6 +18,6 @@ sealed class Screen(val route: String) {
 
     @Serializable
     object PlayMusic : Screen("play_music/{song}") {
-        fun createRoute(song: Song) = "play_music/${Uri.encode(Gson().toJson(song))}"
+        fun createRoute(song: Song?) = "play_music/${Uri.encode(Gson().toJson(song))}"
     }
 }

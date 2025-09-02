@@ -12,6 +12,7 @@ class SongMapper {
             duration = entity.duration,
             filePath = entity.filePath,
             thumbnail = entity.thumbnail,
+            drawableThumbnail = entity.drawableThumbnail,
             isFavorite = entity.isFavorite,
             lastPlayed = entity.lastPlayed,
         )
@@ -25,6 +26,7 @@ class SongMapper {
             duration = domain.duration,
             filePath = domain.filePath,
             thumbnail = domain.thumbnail,
+            drawableThumbnail = domain.drawableThumbnail,
             isFavorite = domain.isFavorite,
             lastPlayed = domain.lastPlayed,
         )

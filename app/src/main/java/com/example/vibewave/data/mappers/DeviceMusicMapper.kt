@@ -12,6 +12,7 @@ class DeviceMusicMapper {
             duration = deviceFile.duration,
             filePath = deviceFile.filePath,
             thumbnail = deviceFile.thumbnail,
+            drawableThumbnail = deviceFile.drawableThumbnail,
             isFavorite = deviceFile.isFavorite,
             lastPlayed = deviceFile.lastPlayed,
         )

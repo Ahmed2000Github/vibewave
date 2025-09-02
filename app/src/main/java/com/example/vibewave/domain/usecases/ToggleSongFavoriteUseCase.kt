@@ -11,3 +11,4 @@ class ToggleSongFavoriteUseCase(
         return repository.toggleFavorite(songId)
     }
 }
+

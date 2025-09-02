@@ -31,10 +31,15 @@ class RecentlyPlayedViewModel @Inject constructor(
             getRecentlyPlayedSongs()
     }
     private fun getRecentlyPlayedSongs() {
+        println("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
         viewModelScope.launch {
             getRecentlyPlayedSongsUseCase()
-                .catch { e -> _state.value = RecentMusicState.Error(e.message ?: "Unknown error") }
+                .catch { e ->
+                    println("REssssssssssssssssssssssssssss${e.message}")
+
+                    _state.value = RecentMusicState.Error(e.message ?: "Unknown error") }
                 .collect { songs ->
+                    println("RErrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr")
                     _state.value = RecentMusicState.Success(songs)
                 }
         }

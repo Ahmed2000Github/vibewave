@@ -12,6 +12,7 @@ import com.example.vibewave.presentation.navigation.AppNavHost
 import com.example.vibewave.ui.theme.VibeWaveTheme
 import dagger.hilt.android.AndroidEntryPoint
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.AlertDialog
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -19,6 +20,9 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.annotation.RequiresApi
+import androidx.compose.runtime.LaunchedEffect
+import com.example.vibewave.domain.usecases.LoadSongsUseCase
+import jakarta.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -94,12 +98,19 @@ class MainActivity : ComponentActivity() {
         }
         finishAffinity()
     }
-
+    @Inject
+    lateinit var loadSongsUseCase: LoadSongsUseCase
+    @SuppressLint("UnusedMaterial3ScaffoldPaddingParameter")
+    @RequiresApi(Build.VERSION_CODES.O)
     private fun proceedWithApp() {
+
         setContent {
             VibeWaveTheme(darkTheme = false) {
                 val navController = rememberNavController()
-                Scaffold(modifier = Modifier.fillMaxSize()) { _ ->
+                LaunchedEffect(Unit) {
+                    loadSongsUseCase()
+                }
+                Scaffold(modifier = Modifier.fillMaxSize()) {
                     AppNavHost(navController = navController)
                 }
             }

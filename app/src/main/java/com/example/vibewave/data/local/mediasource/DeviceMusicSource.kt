@@ -9,6 +9,7 @@ import android.provider.MediaStore
 import android.util.Log
 import androidx.annotation.RequiresApi
 import com.example.vibewave.data.local.entities.MusicFileEntity
+import com.example.vibewave.utils.AppUtils
 import java.io.File
 
 
@@ -48,7 +49,8 @@ class DeviceMusicSource(
                                 artist = cursor.getString(2) ?: "Unknown",
                                 duration = cursor.getLong(3),
                                 filePath = cursor.getString(4),
-                                thumbnail = extractThumbnailFromMp3(cursor.getString(4))
+                                thumbnail = extractThumbnailFromMp3(cursor.getString(4)),
+                                        drawableThumbnail = AppUtils.getRandomImage()
                             )
                         )
 
