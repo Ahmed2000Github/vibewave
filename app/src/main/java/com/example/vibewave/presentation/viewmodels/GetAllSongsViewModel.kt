@@ -47,6 +47,8 @@ class GetAllSongsViewModel @Inject constructor(
             getAllSongsUseCase()
                 .catch { e -> _state.value = AllSongsState.Error(e.message ?: "Unknown error") }
                 .collect { songs ->
+                    println("UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU")
+                    println(songs)
                     _state.value = AllSongsState.Success(songs)
                 }
         }

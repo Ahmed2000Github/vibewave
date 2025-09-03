@@ -281,6 +281,9 @@ fun PlayMusicScreen(
                         painter = painterResource(id = R.drawable.play_prev),
                         contentDescription = "play prev",
                         modifier = Modifier.size(controlIconSize)
+                            .clickable{
+                                audioPlayerViewModel.playPrev()
+                            }
                     )
                     Box(
                         modifier = Modifier.size(100.dp),
@@ -296,6 +299,9 @@ fun PlayMusicScreen(
                         painter = painterResource(id = R.drawable.play_next),
                         contentDescription = "play next",
                         modifier = Modifier.size(controlIconSize)
+                            .clickable{
+                                audioPlayerViewModel.playNext()
+                            }
                     )
                     Spacer(modifier = Modifier.width(0.dp))
                     Image(

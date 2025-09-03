@@ -42,8 +42,8 @@ class AudioPlayerViewModel @Inject constructor(
     val duration = mutableIntStateOf(1)
     val isPaused = mutableStateOf(false)
 
-    init{
-       audioPlayerController.apply {
+    init {
+        audioPlayerController.apply {
             setProgressUpdateListener { currentPos, totalDuration ->
                 duration.intValue = totalDuration
                 currentPosition.longValue = currentPos.toLong()
@@ -52,19 +52,24 @@ class AudioPlayerViewModel @Inject constructor(
                 } else 0f
             }
             setOnCompletion {
+                when (displayMode.intValue) {
+                    1 -> playRandom()
+                    2 -> playNext()
+                    else -> playNextWithoutLoop()
+                }
                 isPlaying.value = false
             }
         }
         viewModelScope.launch {
             getRecentSongUseCase()
-                .catch {  }
+                .catch { }
                 .collect { song ->
                     setCurrentSong(song)
                 }
         }
     }
 
-    suspend fun config(){
+    suspend fun config() {
         if (currentSong.value == null) return
         coroutineScope {
             val amplitudeJob = launch(Dispatchers.IO) {
@@ -74,7 +79,9 @@ class AudioPlayerViewModel @Inject constructor(
                             .get({ result ->
                                 continuation.resume(result)
                             }, { exception ->
-                                continuation.resumeWithException(exception ?: Exception("Unknown error"))
+                                continuation.resumeWithException(
+                                    exception ?: Exception("Unknown error")
+                                )
                             })
                     }
 
@@ -88,10 +95,7 @@ class AudioPlayerViewModel @Inject constructor(
 
             val playerJob = launch(Dispatchers.IO) {
                 try {
-                    println(currentSong.value!!.filePath)
-                    audioPlayerController.playAudio(currentSong.value!!.filePath)
-                    isPaused.value = false
-                    isPlaying.value = true
+                    startNewSong(currentSong.value!!.filePath)
                 } catch (e: Exception) {
                     println("Failed to play: ${e.message}")
                 }
@@ -100,44 +104,47 @@ class AudioPlayerViewModel @Inject constructor(
         }
     }
 
-    fun setCurrentSong(newSong:Song){
+    fun setCurrentSong(newSong: Song) {
         currentSong.value = newSong
     }
-    fun setSongs(newList:List<Song>){
+
+    fun setSongs(newList: List<Song>) {
         songs.value = newList
     }
 
-    fun toggle(){
+    private fun startNewSong(filePath: String) {
+        audioPlayerController.playAudio(filePath)
+        isPaused.value = false
+        isPlaying.value = true
+    }
+
+    fun toggle() {
         if (currentSong.value == null) return
-        if (isPlaying.value == true){
+        if (isPlaying.value == true) {
             audioPlayerController.pause()
             isPlaying.value = false
             isPaused.value = true
-        }else if (isPaused.value){
+        } else if (isPaused.value) {
             audioPlayerController.resume()
             isPaused.value = false
             isPlaying.value = true
-        }else{
-            audioPlayerController.playAudio(currentSong.value!!.filePath)
-            isPaused.value = false
-            isPlaying.value = true
+        } else {
+            startNewSong(currentSong.value!!.filePath)
         }
 
     }
 
-    fun changeProgress(newProgress:Float){
+    fun changeProgress(newProgress: Float) {
         progress.floatValue = newProgress
         audioPlayerController.seekTo((newProgress * duration.intValue).toInt())
     }
 
-    fun changeDisplayMode(){
-        if (displayMode.intValue==2) displayMode.intValue = 0
+    fun changeDisplayMode() {
+        if (displayMode.intValue == 2) displayMode.intValue = 0
         else displayMode.intValue += 1
-        audioPlayerController.setDisplayMode(displayMode.intValue)
-
     }
 
-    fun changeLoopCount(){
+    fun changeLoopCount() {
         when (loopCount.intValue) {
             0 -> loopCount.intValue = 1
             1 -> loopCount.intValue = Int.MAX_VALUE
@@ -146,8 +153,48 @@ class AudioPlayerViewModel @Inject constructor(
         audioPlayerController.setLoopCount(loopCount.intValue)
     }
 
-    fun playNext(){
+    fun playRandom() {
+        if (songs.value == null) return
+        val currentPosition = songs.value!!.indexOf(currentSong.value)
+        val availablePositions = songs.value!!.indices.filter { it != currentPosition }
 
+        val randomPosition = if (availablePositions.isNotEmpty()) {
+            availablePositions.random()
+        } else {
+            currentPosition
+        }
+        currentSong.value = songs.value!![randomPosition]
+        startNewSong(currentSong.value!!.filePath)
+    }
+
+    fun playNextWithoutLoop() {
+        if (songs.value == null) return
+        val currentPosition = songs.value!!.indexOf(currentSong.value)
+        if (currentPosition + 1 >= songs.value!!.size) {
+            isPlaying.value = false
+            isPaused.value = false
+            return
+        }
+        currentSong.value = songs.value!![currentPosition + 1]
+        startNewSong(currentSong.value!!.filePath)
+    }
+
+    fun playNext() {
+
+        if (songs.value == null) return
+        val currentPosition = songs.value!!.indexOf(currentSong.value)
+        val nextPosition = (currentPosition + 1) % songs.value!!.size
+        currentSong.value = songs.value!![nextPosition]
+        startNewSong(currentSong.value!!.filePath)
+    }
+
+    fun playPrev() {
+        if (songs.value == null) return
+        val currentPosition = songs.value!!.indexOf(currentSong.value)
+        val prevPosition =
+            if (currentPosition - 1 < 0) songs.value!!.size - 1 else currentPosition - 1
+        currentSong.value = songs.value!![prevPosition]
+        startNewSong(currentSong.value!!.filePath)
     }
 
 

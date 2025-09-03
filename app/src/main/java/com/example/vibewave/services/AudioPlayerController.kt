@@ -15,15 +15,11 @@ class AudioPlayerController(private val context: Context) {
 
     private var progressListener: ((currentPos: Int, duration: Int) -> Unit)? = null
     private var  onCompletion: (() -> Unit)? = null
-    private var  displayMode: Int = 0
-    private var  currentSong: Song? = null
-    private var  songs: List<Song>? = null
 
 
 
     private val broadcastReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
-//            println("--------------------${intent?.action}-------------------")
             when (intent?.action) {
                 AudioPlayerServiceSession.ACTION_PROGRESS_UPDATE -> {
                     val currentPos = intent.getIntExtra(AudioPlayerServiceSession.EXTRA_CURRENT_POS, 0)
@@ -31,33 +27,7 @@ class AudioPlayerController(private val context: Context) {
                     progressListener?.invoke(currentPos, duration)
                 }
                 AudioPlayerServiceSession.ACTION_ON_COMPLETION ->{
-                    when(displayMode){
-                        0 ->onCompletion?.invoke()
-                        1 -> {
-                            val currentIndex = songs?.indexOf(currentSong) ?: -1
-                            when {
-                                currentIndex > -1 -> {
-                                    val nextIndex = (currentIndex + 1) % songs!!.size
-                                    songs!![nextIndex]?.filePath?.let { playAudio(it) } ?: onCompletion?.invoke()
-                                }
-                                else -> onCompletion?.invoke()
-                            }
-                        }
-                        else -> {
-                            val currentIndex = songs?.indexOf(currentSong) ?: -1
-                            if (currentIndex > -1 && songs != null) {
-                                val nextIndex = Random.nextInt(songs!!.size)
-                                val nextSong = songs!![nextIndex]
-                                playAudio(nextSong.filePath)
-                            } else {
-                                onCompletion?.invoke()
-                            }
-                        }
-                    }
-
-                }
-                else -> {
-
+                    onCompletion?.invoke()
                 }
             }
         }
@@ -77,9 +47,6 @@ class AudioPlayerController(private val context: Context) {
         }
         context.startService(intent)
     }
-    fun setDisplayMode(display:Int){
-        displayMode = display
-    }
 
     fun setProgressUpdateListener(listener: (currentPos: Int, duration: Int) -> Unit) {
         this.progressListener = listener
@@ -94,9 +61,6 @@ class AudioPlayerController(private val context: Context) {
         }
     }
     fun playAudio(filePath: String) {
-//        if (!isServiceRunning()){
-        println("Service already running ....")
-            currentSong = songs?.first { song -> song.filePath == filePath }
             val intent = Intent(context, AudioPlayerServiceSession::class.java).apply {
                 action = AudioPlayerServiceSession.ACTION_PLAY
                 putExtra(AudioPlayerServiceSession.EXTRA_FILE_PATH, filePath)

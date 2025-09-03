@@ -54,6 +54,7 @@ import com.example.vibewave.presentation.viewmodels.AudioPlayerViewModel
 import com.example.vibewave.presentation.viewmodels.FavoriteSongsViewModel
 import com.example.vibewave.presentation.viewmodels.GetAllSongsViewModel
 import com.example.vibewave.presentation.viewmodels.RecentlyPlayedViewModel
+import kotlinx.coroutines.flow.observeOn
 
 
 @RequiresApi(Build.VERSION_CODES.O)
@@ -71,17 +72,21 @@ fun HomeScreen(
     val focusRequester = remember { FocusRequester() }
     val favoriteSongsState by favoriteSongsViewModel.state.collectAsState()
     val recentlyPlayedState by recentlyPlayedViewModel.state.collectAsState()
-    LaunchedEffect("") {
-        snapshotFlow { allSongsViewModel.state.value }
-            .collect { state ->
-                if (state is AllSongsState.Success) audioPlayerViewModel.setSongs(state.songs)
-            }
-    }
-
+    val songsState by allSongsViewModel.state.collectAsState()
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars
     ) { innerPadding ->
+        when (val songsState = songsState) {
+            is AllSongsState.Success -> {
+                audioPlayerViewModel.setSongs(songsState.songs)
+            }
 
+            is AllSongsState.Error -> {
+            }
+
+            else -> {
+            }
+        }
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -119,8 +124,6 @@ fun HomeScreen(
                     when (val state = recentlyPlayedState) {
                         is RecentMusicState.Loading -> {
                             LazyRow(
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(30.dp)
                             ) {
                                 items(3) { index ->
@@ -135,8 +138,6 @@ fun HomeScreen(
 
                         is RecentMusicState.Success -> {
                             LazyRow(
-                                modifier = Modifier
-                                    .padding(horizontal = 16.dp),
                                 horizontalArrangement = Arrangement.spacedBy(30.dp)
                             ) {
                                 items(state.songs.size) { index ->
