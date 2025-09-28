@@ -1,6 +1,9 @@
 package com.example.vibewave.presentation.viewmodels
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.vibewave.domain.models.Song
 import com.example.vibewave.domain.usecases.GetFavoriteSongsUseCase
 import com.example.vibewave.domain.usecases.GetRecentlyPlayedSongsUseCase
 import com.example.vibewave.domain.usecases.LoadDeviceSongsUseCase
@@ -14,6 +17,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@RequiresApi(Build.VERSION_CODES.N)
 class FavoriteSongsViewModel @Inject constructor(
     private val getFavoriteSongsUseCase: GetFavoriteSongsUseCase,
 ) : ViewModel() {
@@ -26,6 +30,16 @@ class FavoriteSongsViewModel @Inject constructor(
     }
      fun refreshSongs() {
         getFavoriteSongs()
+    }
+
+    fun updateList(target: Song) {
+        if (_state.value is FavoriteSongsState.Success) {
+            val currentState = _state.value as FavoriteSongsState.Success
+            val updatedSongs = currentState.songs.toMutableList().apply {
+                removeIf { it.id == target.id } // or your condition to identify the song
+            }
+            _state.value = FavoriteSongsState.Success(updatedSongs)
+        }
     }
     private fun getFavoriteSongs() {
         _state.value = FavoriteSongsState.Loading

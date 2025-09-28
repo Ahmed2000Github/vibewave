@@ -3,6 +3,7 @@ package com.example.vibewave.presentation.ui.screens
 import android.os.Build
 import android.widget.Toast
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -38,6 +40,7 @@ import com.example.vibewave.presentation.state.AllSongsState
 import com.example.vibewave.presentation.ui.components.BottomNavBar
 import com.example.vibewave.presentation.ui.components.SongCardSkeleton
 import com.example.vibewave.presentation.viewmodels.AudioPlayerViewModel
+import com.example.vibewave.presentation.viewmodels.FavoriteSongsViewModel
 import com.example.vibewave.presentation.viewmodels.GetAllSongsViewModel
 import kotlinx.coroutines.launch
 
@@ -46,23 +49,27 @@ import kotlinx.coroutines.launch
 @Composable
 fun MusicListScreen(navController: NavController,
                     getAllSongsViewModel: GetAllSongsViewModel,
+                    favoriteSongsViewModel: FavoriteSongsViewModel,
                     audioPlayerViewModel: AudioPlayerViewModel) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val state by getAllSongsViewModel.state.collectAsState()
-
+    LaunchedEffect(favoriteSongsViewModel.state){
+        getAllSongsViewModel.refreshSongs()
+    }
 
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars
 
-    ) { innerPadding ->
+    ) { _ ->
 
-        Column ( modifier = Modifier.fillMaxSize() .navigationBarsPadding()
+        Column ( modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding()
             .imePadding()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(innerPadding)
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
                     .padding(top = 16.dp)
@@ -87,52 +94,61 @@ fun MusicListScreen(navController: NavController,
                         Spacer(modifier = Modifier.weight(1f))
                         Icon(
                             imageVector = Icons.Default.Refresh,
-                            contentDescription = "Back",
+                            contentDescription = "Refresh",
                             modifier = Modifier
                                 .size(24.dp)
                                 .clickable {
-                                    coroutineScope.launch {
                                         getAllSongsViewModel.refreshSongs()
-                                    }
                                 },
                             tint = Color.White
                         )
                     }
                     Spacer(modifier = Modifier.height(26.dp))
-                    when (val currentState = state) {
-                        is AllSongsState.Loading -> LazyColumn(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalArrangement = Arrangement.spacedBy(30.dp)
-                        ) {
-                            items(10) { index ->
-                                SongCardSkeleton()
-                            }
-                        }
-
-                        is AllSongsState.Success ->
-                            LazyColumn(
+                    Column (
+                        modifier = Modifier.fillMaxSize(),
+                    )  {
+                        when (val currentState = state) {
+                            is AllSongsState.Loading -> LazyColumn(
                                 modifier = Modifier.fillMaxSize(),
                                 verticalArrangement = Arrangement.spacedBy(30.dp)
                             ) {
-                                items(currentState.songs.size) { index ->
-                                    SongCard(
-                                        navController = navController,
-                                        initialSong = currentState.songs[index]
-                                    )
+                                items(10) { index ->
+                                    SongCardSkeleton()
                                 }
                             }
 
-                        is AllSongsState.Error -> Text(
-                            text = currentState.message ?: "Null Error",
-                            color = Color.White
-                        )
+                            is AllSongsState.Success ->
+                                Column {
+                                    LazyColumn(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.spacedBy(30.dp)
+                                    ) {
+                                        items(currentState.songs.size+1) { index ->
+                                            if (index<currentState.songs.size)
+                                                SongCard(
+                                                    navController = navController,
+                                                    initialSong = currentState.songs[index],
+                                                    favoriteSongsViewModel=favoriteSongsViewModel
+                                                )else
+                                                Spacer(modifier = Modifier.height(8.dp))
+                                        }
+                                    }
+                                }
+
+                            is AllSongsState.Error -> Text(
+                                text = currentState.message ?: "Null Error",
+                                color = Color.White
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
                     }
-                    Spacer(modifier = Modifier.height(26.dp))
+
                 }
 
             }
            if(audioPlayerViewModel.currentSong.value != null)
-               Box {
+               Box{
+
                 BottomNavBar(navController,audioPlayerViewModel = audioPlayerViewModel)
             }
         }

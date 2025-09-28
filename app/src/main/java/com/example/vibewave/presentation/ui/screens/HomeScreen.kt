@@ -2,6 +2,7 @@ package com.example.vibewave.presentation.ui.screens
 
 import android.os.Build
 import androidx.annotation.RequiresApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -11,8 +12,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -44,6 +48,8 @@ import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.state.AllSongsState
 import com.example.vibewave.presentation.state.FavoriteSongsState
 import com.example.vibewave.presentation.state.RecentMusicState
+import com.example.vibewave.presentation.state.SearchSongState
+import com.example.vibewave.presentation.state.SongCardState
 import com.example.vibewave.presentation.ui.components.BottomNavBar
 import com.example.vibewave.presentation.ui.components.CustomInput
 import com.example.vibewave.presentation.ui.components.RecentPlayedSongCard
@@ -54,6 +60,8 @@ import com.example.vibewave.presentation.viewmodels.AudioPlayerViewModel
 import com.example.vibewave.presentation.viewmodels.FavoriteSongsViewModel
 import com.example.vibewave.presentation.viewmodels.GetAllSongsViewModel
 import com.example.vibewave.presentation.viewmodels.RecentlyPlayedViewModel
+import com.example.vibewave.presentation.viewmodels.SearchSongViewModel
+import com.example.vibewave.presentation.viewmodels.SongViewModel
 import kotlinx.coroutines.flow.observeOn
 
 
@@ -63,19 +71,23 @@ fun HomeScreen(
     navController: NavController,
     audioPlayerViewModel: AudioPlayerViewModel,
     allSongsViewModel: GetAllSongsViewModel,
+    searchSongViewModel: SearchSongViewModel,
     favoriteSongsViewModel: FavoriteSongsViewModel,
     recentlyPlayedViewModel: RecentlyPlayedViewModel
 ) {
-    val text = remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
     val keyboardController = LocalSoftwareKeyboardController.current
-    val focusRequester = remember { FocusRequester() }
     val favoriteSongsState by favoriteSongsViewModel.state.collectAsState()
     val recentlyPlayedState by recentlyPlayedViewModel.state.collectAsState()
     val songsState by allSongsViewModel.state.collectAsState()
+    val updateSongState by allSongsViewModel.state.collectAsState()
+    LaunchedEffect(updateSongState) {
+        favoriteSongsViewModel.refreshSongs()
+        recentlyPlayedViewModel.refreshSongs()
+    }
     Scaffold(
         contentWindowInsets = WindowInsets.systemBars
-    ) { innerPadding ->
+    ) { _ ->
         when (val songsState = songsState) {
             is AllSongsState.Success -> {
                 audioPlayerViewModel.setSongs(songsState.songs)
@@ -87,6 +99,7 @@ fun HomeScreen(
             else -> {
             }
         }
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -96,7 +109,6 @@ fun HomeScreen(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .padding(innerPadding)
                     .fillMaxSize()
                     .padding(horizontal = 16.dp)
                     .padding(top = 16.dp)
@@ -108,8 +120,10 @@ fun HomeScreen(
                         keyboardController?.hide()
                     }
             ) {
+
                 Column {
-                    CustomInput()
+                    Spacer(Modifier.height(60.dp))
+
                     Spacer(modifier = Modifier.height(26.dp))
                     Row {
                         Text(
@@ -183,11 +197,24 @@ fun HomeScreen(
                                     .padding(bottom = 10.dp),
                                 verticalArrangement = Arrangement.spacedBy(30.dp)
                             ) {
-                                items(state.songs.size) { index ->
-                                    SongCard(
-                                        navController = navController,
-                                        initialSong = state.songs[index]
-                                    )
+                                items(state.songs.size + 1) { index ->
+                                    if (index < state.songs.size)
+                                        SongCard(
+                                            navController = navController,
+                                            initialSong = Song(
+                                                id = state.songs[index].id,
+                                                title = state.songs[index].title,
+                                                artist = state.songs[index].artist,
+                                                duration = state.songs[index].duration,
+                                                filePath = state.songs[index].filePath,
+                                                thumbnail = state.songs[index].thumbnail,
+                                                drawableThumbnail = state.songs[index].drawableThumbnail,
+                                                isFavorite = true,
+                                                lastPlayed = state.songs[index].lastPlayed,
+                                            ),
+                                            favoriteSongsViewModel = favoriteSongsViewModel
+                                        ) else
+                                        Spacer(modifier = Modifier.height(8.dp))
                                 }
                             }
 
@@ -198,6 +225,12 @@ fun HomeScreen(
                     }
 
                 }
+                CustomInput(
+                    searchSongViewModel = searchSongViewModel,
+                    favoriteSongsViewModel = favoriteSongsViewModel,
+                    navController = navController
+                )
+
             }
             if (audioPlayerViewModel.currentSong.value != null)
                 Box {

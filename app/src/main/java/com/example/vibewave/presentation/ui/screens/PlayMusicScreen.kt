@@ -107,12 +107,14 @@ fun PlayMusicScreen(
         initialSong ?: audioPlayerViewModel.currentSong.value!!
     }
     LaunchedEffect("") {
-        if (initialSong != null){
+        if (initialSong != null) {
             audioPlayerViewModel.setCurrentSong(song)
             getAllSongsViewModel.updateSong(song)
             songViewModel.updateLastPlay(song.id)
+            audioPlayerViewModel.config(true)
+        } else
             audioPlayerViewModel.config()
-        }
+
     }
 
     DisposableEffect(Unit) {
@@ -211,13 +213,34 @@ fun PlayMusicScreen(
                                 songViewModel.toggleSongFavorite(song.id)
                             }
                     ) {
-                        Image(
-                            painter = painterResource(id = if (song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
-                            contentDescription = "favorite",
-                            modifier = Modifier
-                                .size(30.dp)
-                                .align(Alignment.Center)
-                        )
+                        when(val _state = songCardState){
+                            is SongCardState.Success -> Image(
+                                painter = painterResource(id = if (_state.song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
+                                contentDescription = "favorite",
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .align(Alignment.Center)
+                            )
+                            is SongCardState.Error -> {
+                                Image(
+                                    painter = painterResource(id = if (song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
+                                    contentDescription = "favorite",
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .align(Alignment.Center)
+                                )
+                            }
+                            is SongCardState.Loading -> {Image(
+                                painter = painterResource(id = if (song.isFavorite == true) R.drawable.heart_filled else R.drawable.heart),
+                                contentDescription = "favorite",
+                                modifier = Modifier
+                                    .size(30.dp)
+                                    .align(Alignment.Center)
+                            )
+
+                            }
+                        }
+
                     }
 
                 }
@@ -280,8 +303,9 @@ fun PlayMusicScreen(
                     Image(
                         painter = painterResource(id = R.drawable.play_prev),
                         contentDescription = "play prev",
-                        modifier = Modifier.size(controlIconSize)
-                            .clickable{
+                        modifier = Modifier
+                            .size(controlIconSize)
+                            .clickable {
                                 audioPlayerViewModel.playPrev()
                             }
                     )
@@ -298,8 +322,9 @@ fun PlayMusicScreen(
                     Image(
                         painter = painterResource(id = R.drawable.play_next),
                         contentDescription = "play next",
-                        modifier = Modifier.size(controlIconSize)
-                            .clickable{
+                        modifier = Modifier
+                            .size(controlIconSize)
+                            .clickable {
                                 audioPlayerViewModel.playNext()
                             }
                     )

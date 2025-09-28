@@ -1,5 +1,7 @@
 package com.example.vibewave.presentation.viewmodels
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.vibewave.domain.usecases.ToggleSongFavoriteUseCase
@@ -13,6 +15,8 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
+@RequiresApi(Build.VERSION_CODES.N)
+
 class SongViewModel @Inject constructor(
     private val toggleSongFavoriteUseCase: ToggleSongFavoriteUseCase,
     private val updateLastPlayUseCase: UpdateLastPlayUseCase,
@@ -20,6 +24,17 @@ class SongViewModel @Inject constructor(
 
     private val _state = MutableStateFlow<SongCardState>(SongCardState.Loading)
     val state: StateFlow<SongCardState> = _state
+    private var _favoriteSongsViewModel: FavoriteSongsViewModel? = null
+    private var _recentlyPlayedViewModel: RecentlyPlayedViewModel? = null
+
+
+    fun setFavoriteSongsViewModel(favoriteSongsViewModel:FavoriteSongsViewModel?) {
+
+        _favoriteSongsViewModel = favoriteSongsViewModel
+    }
+    fun setRecentlyPlayedViewModel(recentlyPlayedViewModel:RecentlyPlayedViewModel) {
+        _recentlyPlayedViewModel = recentlyPlayedViewModel
+    }
      fun toggleSongFavorite(songId:String) {
         viewModelScope.launch {
             toggleSongFavoriteUseCase(songId)
@@ -27,6 +42,7 @@ class SongViewModel @Inject constructor(
                         _state.value = SongCardState.Error(e.message ?: "Unknown error") }
                     .collect { song ->
                         _state.value = SongCardState.Success(song)
+                        _favoriteSongsViewModel?.updateList(song)
                     }
         }
     }
@@ -34,10 +50,10 @@ class SongViewModel @Inject constructor(
         viewModelScope.launch {
             updateLastPlayUseCase(songId)
                 .catch { e ->
-                    println("eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee${e.message}")
                     _state.value = SongCardState.Error(e.message ?: "Unknown error") }
                 .collect { song ->
                     _state.value = SongCardState.Success(song)
+                    _recentlyPlayedViewModel?.refreshSongs()
                 }
         }
     }

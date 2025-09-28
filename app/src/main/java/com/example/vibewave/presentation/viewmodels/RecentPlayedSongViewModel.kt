@@ -25,8 +25,8 @@ class RecentlyPlayedViewModel @Inject constructor(
     init {
         getRecentlyPlayedSongs()
     }
-    suspend fun refreshSongs() {
-            _state.value = RecentMusicState.Loading
+    suspend fun refreshSongs(shouldShowLoading:Boolean = false) {
+           if(shouldShowLoading) _state.value = RecentMusicState.Loading
             loadDeviceSongsUseCase()
             getRecentlyPlayedSongs()
     }

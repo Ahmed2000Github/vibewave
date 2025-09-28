@@ -66,7 +66,8 @@ fun BottomNavBar(
                 if (audioPlayerViewModel.currentSong.value != null) {
                     navController.navigate(Screen.PlayMusic.createRoute(null))
                 }
-            }
+            },
+                verticalAlignment = Alignment.CenterVertically,
     ) {
         SongThumbnail(
             thumbnail = audioPlayerViewModel.currentSong.value!!.thumbnail,
@@ -102,6 +103,9 @@ fun BottomNavBar(
                 painter = painterResource(id = R.drawable.play_prev),
                 contentDescription = "play prev",
                 modifier = Modifier.size(controlIconSize)
+                    .clickable{
+                        audioPlayerViewModel.playPrev()
+                    }
             )
             Box(
                 modifier = Modifier .size(70.dp),
@@ -119,6 +123,9 @@ fun BottomNavBar(
                 painter = painterResource(id = R.drawable.play_next),
                 contentDescription = "play next",
                 modifier = Modifier.size(controlIconSize)
+                    .clickable{
+                        audioPlayerViewModel.playNext()
+                    }
             )
         }
 

@@ -69,7 +69,7 @@ class AudioPlayerViewModel @Inject constructor(
         }
     }
 
-    suspend fun config() {
+    suspend fun config(shouldStartSong:Boolean = false) {
         if (currentSong.value == null) return
         coroutineScope {
             val amplitudeJob = launch(Dispatchers.IO) {
@@ -92,15 +92,17 @@ class AudioPlayerViewModel @Inject constructor(
                     println("Failed to process amplitudes: ${e.message}")
                 }
             }
+  if (shouldStartSong){
+      val playerJob = launch(Dispatchers.IO) {
+          try {
+              startNewSong(currentSong.value!!.filePath)
+          } catch (e: Exception) {
+              println("Failed to play: ${e.message}")
+          }
+      }
+      joinAll(amplitudeJob, playerJob)
+  }
 
-            val playerJob = launch(Dispatchers.IO) {
-                try {
-                    startNewSong(currentSong.value!!.filePath)
-                } catch (e: Exception) {
-                    println("Failed to play: ${e.message}")
-                }
-            }
-            joinAll(amplitudeJob, playerJob)
         }
     }
 

@@ -17,6 +17,7 @@ import com.example.vibewave.presentation.viewmodels.AudioPlayerViewModel
 import com.example.vibewave.presentation.viewmodels.FavoriteSongsViewModel
 import com.example.vibewave.presentation.viewmodels.GetAllSongsViewModel
 import com.example.vibewave.presentation.viewmodels.RecentlyPlayedViewModel
+import com.example.vibewave.presentation.viewmodels.SearchSongViewModel
 import com.example.vibewave.presentation.viewmodels.SongViewModel
 import com.google.gson.Gson
 
@@ -28,7 +29,10 @@ fun AppNavHost(navController: NavHostController) {
     val allSongsViewModel: GetAllSongsViewModel = hiltViewModel()
     val favoriteSongsViewModel: FavoriteSongsViewModel = hiltViewModel()
     val recentlyPlayedViewModel: RecentlyPlayedViewModel = hiltViewModel()
+    val  searchSongViewModel: SearchSongViewModel = hiltViewModel()
     val  songViewModel: SongViewModel = hiltViewModel()
+    songViewModel.setFavoriteSongsViewModel(favoriteSongsViewModel)
+    songViewModel.setRecentlyPlayedViewModel(recentlyPlayedViewModel)
     NavHost(
         navController = navController,
         startDestination = Screen.Home.route
@@ -40,14 +44,17 @@ fun AppNavHost(navController: NavHostController) {
             HomeScreen(
                 navController, audioPlayerViewModel = audioPlayerViewModel,
                 allSongsViewModel = allSongsViewModel,
+                searchSongViewModel = searchSongViewModel,
                 favoriteSongsViewModel = favoriteSongsViewModel,
+//                songViewModel = songViewModel,
                 recentlyPlayedViewModel = recentlyPlayedViewModel,
             )
         }
         composable(Screen.MusicList.route) {
             MusicListScreen(
                 navController, audioPlayerViewModel = audioPlayerViewModel,
-                getAllSongsViewModel = allSongsViewModel
+                getAllSongsViewModel = allSongsViewModel,
+                favoriteSongsViewModel=favoriteSongsViewModel
             )
         }
         composable(Screen.PlayMusic.route) { backStackEntry ->

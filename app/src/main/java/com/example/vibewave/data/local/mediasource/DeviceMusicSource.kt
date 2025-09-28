@@ -42,16 +42,18 @@ class DeviceMusicSource(
             while (cursor.moveToNext()) {
                 val filePath = cursor.getString(4)
                 if (filePath != null && File(filePath).exists() && cursor.getLong(3) != 0L) {
+
+                    val entity =  MusicFileEntity(
+                        id = cursor.getLong(0).toString(),
+                        title = cursor.getString(1) ?: "Unknown",
+                        artist = cursor.getString(2) ?: "Unknown",
+                        duration = cursor.getLong(3),
+                        filePath = cursor.getString(4),
+                        thumbnail = extractThumbnailFromMp3(cursor.getString(4)),
+                        drawableThumbnail = AppUtils.getRandomImage()
+                    )
                         songs.add(
-                            MusicFileEntity(
-                                id = cursor.getLong(0).toString(),
-                                title = cursor.getString(1) ?: "Unknown",
-                                artist = cursor.getString(2) ?: "Unknown",
-                                duration = cursor.getLong(3),
-                                filePath = cursor.getString(4),
-                                thumbnail = extractThumbnailFromMp3(cursor.getString(4)),
-                                        drawableThumbnail = AppUtils.getRandomImage()
-                            )
+                           entity
                         )
 
                 }
@@ -67,7 +69,6 @@ class DeviceMusicSource(
             val embeddedPicture = retriever.embeddedPicture
 
             embeddedPicture?.let { imageData ->
-                // Use system temp directory (doesn't require Context)
                 val tempFile = File.createTempFile(
                     "thumb_${System.currentTimeMillis()}",
                     ".jpg"

@@ -30,13 +30,16 @@ class SongsRepositoryImpl(
 
     override fun getSongs(): Flow<List<Song>> {
         return songDao.getSongs().map { list ->
-            list.map { songMapper.mapFromEntity(it) }
+            list.map {
+                println(it)
+                songMapper.mapFromEntity(it) }
         }
     }
 
-    override fun getFilteredSongs(query:String): Flow<List<Song>> {
-        return songDao.getRecentPlayedSongs().map { list ->
-            list.map { songMapper.mapFromEntity(it) }
+    override fun searchSongs(query:String): Flow<List<Song>> {
+        return songDao.searchSongs(query).map { list ->
+            list.map {
+                songMapper.mapFromEntity(it) }
         }
     }
 

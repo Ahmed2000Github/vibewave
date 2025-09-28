@@ -1,5 +1,7 @@
 package com.example.vibewave.presentation.ui.components
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -40,20 +42,22 @@ import com.example.vibewave.R
 import com.example.vibewave.domain.models.Song
 import com.example.vibewave.presentation.navigation.Screen
 import com.example.vibewave.presentation.state.SongCardState
+import com.example.vibewave.presentation.viewmodels.FavoriteSongsViewModel
 import com.example.vibewave.presentation.viewmodels.SongViewModel
 
+@RequiresApi(Build.VERSION_CODES.N)
 @Composable
-fun SongCard(navController: NavController, initialSong: Song) {
+fun SongCard(navController: NavController, initialSong: Song,favoriteSongsViewModel: FavoriteSongsViewModel) {
     val cardWidth = 70.dp
     val viewModel: SongViewModel = hiltViewModel(
         key = "song_card_${initialSong.id}"
     )
+    viewModel.setFavoriteSongsViewModel(favoriteSongsViewModel)
     val state by viewModel.state.collectAsState()
     val song by remember(state) {
         derivedStateOf {
             when (val currentState = state) {
                 is SongCardState.Success -> {
-                    println("1111111111111111111111111111111111111111111111")
                     currentState.song
                 }
                 else -> initialSong

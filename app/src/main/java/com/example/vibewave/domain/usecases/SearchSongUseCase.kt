@@ -8,6 +8,6 @@ class SearchSongUseCase(
     private val repository: SongsRepository
 ) {
     operator fun invoke(query:String): Flow<List<Song>> {
-        return repository.getFilteredSongs(query)
+        return repository.searchSongs(query)
     }
 }

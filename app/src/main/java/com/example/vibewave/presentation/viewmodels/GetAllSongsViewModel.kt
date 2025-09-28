@@ -22,27 +22,30 @@ class GetAllSongsViewModel @Inject constructor(
     val state: StateFlow<AllSongsState> = _state
 
     init {
-                    getAllSongs()
-    }
-     fun refreshSongs() {
         getAllSongs()
     }
 
-        fun updateSong(updatedSong: Song) {
-            val innerState = _state.value
-            if (innerState is AllSongsState.Success) {
-               val updatedSongs =  innerState.songs.map { song ->
-                   if (song.filePath == updatedSong.filePath) {
-                       updatedSong
-                   } else {
-                       song
-                   }
-               }
-               _state.value = AllSongsState.Success(updatedSongs)
-           }
+    fun refreshSongs() {
+        getAllSongs()
+    }
 
+    fun updateSong(updatedSong: Song) {
+        val innerState = _state.value
+        if (innerState is AllSongsState.Success) {
+            val updatedSongs = innerState.songs.map { song ->
+                if (song.filePath == updatedSong.filePath) {
+                    updatedSong
+                } else {
+                    song
+                }
+            }
+            _state.value = AllSongsState.Success(updatedSongs)
         }
+
+    }
+
     private fun getAllSongs() {
+        _state.value = AllSongsState.Loading
         viewModelScope.launch {
             getAllSongsUseCase()
                 .catch { e -> _state.value = AllSongsState.Error(e.message ?: "Unknown error") }
