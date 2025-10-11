@@ -14,7 +14,7 @@
 
 ## Download
 
-[Download APK](apk/vibewave.apk)
+[Download APK](blob:https://github.com/4d254c8b-5e7f-4ff0-9adf-692be0382334)
 
 ## Tech Stack
 
